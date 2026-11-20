@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>빵집 타이쿤 (Bakery Tycoon)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Gaegu / Noto Sans KR for warm bakery vibe -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Inter:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <style>
+    /* Custom typography & bakery theme animations */
+    body {
+      font-family: 'Noto Sans KR', 'Inter', sans-serif;
+      background-color: #fdf6ec;
+      color: #4a2e1b;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+    }
+
+    .font-cute {
+      font-family: 'Gaegu', 'Noto Sans KR', cursive, sans-serif;
+    }
+
+    /* Warm wood & pastel grain accents */
+    .wood-panel {
+      background: linear-gradient(180deg, #f7e3c6 0%, #edd1ab 100%);
+      border: 3px solid #c99663;
+      box-shadow: 0 6px 0 #b37d48, 0 10px 20px rgba(74, 46, 27, 0.12);
+    }
+
+    .wood-shelf {
+      background: linear-gradient(180deg, #e0aa74 0%, #c88d55 100%);
+      border-bottom: 5px solid #9e6734;
+      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4), 0 4px 10px rgba(74, 46, 27, 0.15);
+    }
+
+    .juicy-btn {
+      transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease, filter 0.15s ease;
+    }
+
+    .juicy-btn:hover:not(:disabled) {
+      transform: translateY(-2px) scale(1.02);
+      filter: brightness(1.03);
+    }
+
+    .juicy-btn:active:not(:disabled) {
+      transform: translateY(3px) scale(0.97);
+    }
+
+    @keyframes floatUpFade {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(0.8);
+      }
+      20% {
+        opacity: 1;
+        transform: translate(-50%, -14px) scale(1.1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -52px) scale(0.95);
+      }
+    }
+
+    .floating-popup {
+      position: fixed;
+      pointer-events: none;
+      z-index: 999;
+      font-weight: 900;
+      text-shadow: 0 2px 0 rgba(255, 255, 255, 0.9), 0 4px 8px rgba(0, 0, 0, 0.18);
+      animation: floatUpFade 1.05s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes popReady {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.07); }
+    }
+
+    .ready-pulse {
+      animation: popReady 0.9s infinite ease-in-out;
+    }
+
+    @keyframes customerEnter {
+      0% {
+        opacity: 0;
+        transform: translateY(18px) scale(0.9);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .customer-card {
+      animation: customerEnter 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    @keyframes shakeAngry {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px) rotate(-2deg); }
+      75% { transform: translateX(5px) rotate(2deg); }
+    }
+
+    .urgent-patience {
+      animation: shakeAngry 0.45s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top HUD Bar -->
+  <header class="w-full bg-[#fffaf2] border-b-4 border-[#dfb586] shadow-sm sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-4">
+      <!-- Brand & Level -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-300 to-orange-400 border-2 border-amber-600 flex items-center justify-center shadow-inner text-2xl">
+          🥐
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-cute text-2xl sm:text-3xl font-bold text-[#5c361c] leading-none">빵집 타이쿤</h1>
+            <span id="hud-level" class="px-2.5 py-0.5 rounded-full text-xs sm:text-sm font-extrabold bg-amber-500 text-white shadow-sm">
+              Lv.1
+            </span>
+          </div>
+          <p class="text-[11px] sm:text-xs text-[#8b5a36] font-medium mt-0.5">따끈따끈 행복 베이커리</p>
+        </div>
+      </div>
+
+      <!-- Day & Time Progress -->
+      <div class="flex-1 min-w-[175px] max-w-sm bg-[#f7ead7] border-2 border-[#dfc097] rounded-2xl px-3 py-1.5">
+        <div class="flex items-center justify-between text-xs sm:text-sm font-bold mb-1">
+          <span id="hud-day" class="text-[#6b3f20]">1일차</span>
+          <span id="hud-phase" class="px-2 py-0.5 rounded-full text-[11px] bg-amber-200 text-amber-900">🌅 아침 준비</span>
+          <span id="hud-timer" class="text-[#8b5a36] tabular-nums">60s</span>
+        </div>
+        <div class="w-full h-3 bg-[#e6d2b5] rounded-full overflow-hidden border border-[#cfa878]">
+          <div id="hud-time-bar" class="h-full bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 transition-all duration-200 rounded-full" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Gold & Reputation -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex items-center gap-1.5 bg-amber-100 border-2 border-amber-400 rounded-2xl px-3 py-1.5 shadow-inner">
+          <span class="text-lg sm:text-xl">🪙</span>
+          <div>
+            <div class="text-[10px] font-bold text-amber-800 leading-none">골드</div>
+            <div id="hud-gold" class="text-sm sm:text-base font-black text-amber-950 tabular-nums">120</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 bg-rose-50 border-2 border-rose-300 rounded-2xl px-3 py-1.5 shadow-inner">
+          <span class="text-lg sm:text-xl">⭐</span>
+          <div>
+            <div class="text-[10px] font-bold text-rose-700 leading-none">평판</div>
+            <div id="hud-rep" class="text-sm sm:text-base font-black text-rose-900 tabular-nums">0</div>
+          </div>
+        </div>
+
+        <!-- Utility Buttons -->
+        <button id="btn-guide" title="게임 방법" class="juicy-btn p-2.5 rounded-2xl bg-[#fff3e0] hover:bg-[#ffe4bc] border-2 border-[#d4a373] text-[#5c361c] font-bold text-sm">
+          ❓
+        </button>
+        <button id="btn-sound" title="소리 켜기/끄기" class="juicy-btn p-2.5 rounded-2xl bg-[#fff3e0] hover:bg-[#ffe4bc] border-2 border-[#d4a373] text-[#5c361c] font-bold text-sm">
+          🔊
+        </button>
+        <button id="btn-reset" title="새 게임 시작" class="juicy-btn p-2.5 rounded-2xl bg-red-50 hover:bg-red-100 border-2 border-red-300 text-red-700 font-bold text-xs sm:text-sm">
+          🔄
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast / Event Banner -->
+  <div id="event-banner" class="hidden max-w-4xl w-full mx-auto px-4 pt-2">
+    <div id="event-banner-inner" class="rounded-2xl px-4 py-2 text-center text-xs sm:text-sm font-extrabold shadow-sm border-2"></div>
+  </div>
+
+  <!-- Main Content Grid -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
+
+    <!-- Left & Center Play Area (8 cols on lg) -->
+    <section class="lg:col-span-8 flex flex-col gap-4">
+
+      <!-- 1. Customers Zone -->
+      <div class="wood-panel rounded-3xl p-3.5 sm:p-4">
+        <div class="flex items-center justify-between mb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🧑‍🤝‍🧑</span>
+            <h2 class="font-cute text-2xl font-bold text-[#5c361c]">방문 손님</h2>
+            <span id="customer-count-badge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#fff6e5] border border-[#d6ab7c] text-[#7a4b2a]">
+              0 / 4명
+            </span>
+          </div>
+          <span class="text-xs text-[#7d4e2d] font-semibold hidden sm:inline">
+            💡 손님이 원하는 빵을 클릭하거나, 진열대 빵을 눌러 전달하세요!
+          </span>
+        </div>
+
+        <div id="customers-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 min-h-[158px]">
+          <!-- Customers dynamically rendered here -->
+        </div>
+      </div>
+
+      <!-- 2. Display Shelf Zone -->
+      <div class="wood-panel rounded-3xl p-3.5 sm:p-4">
+        <div class="flex items-center justify-between mb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🧺</span>
+            <h2 class="font-cute text-2xl font-bold text-[#5c361c]">빵 진열대</h2>
+          </div>
+          <span id="shelf-hint" class="text-xs font-bold text-amber-800 bg-amber-100/90 px-2.5 py-1 rounded-full border border-amber-300">
+            선택된 빵 없음
+          </span>
+        </div>
+
+        <div id="shelf-container" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+          <!-- Shelf slots dynamically rendered here -->
+        </div>
+        <div class="wood-shelf h-3 rounded-full mt-2.5"></div>
+      </div>
+
+      <!-- 3. Baking Ovens & Stations Zone -->
+      <div class="wood-panel rounded-3xl p-3.5 sm:p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🔥</span>
+            <h2 class="font-cute text-2xl font-bold text-[#5c361c]">오븐 &amp; 제조대</h2>
+          </div>
+
+          <!-- Recipe Selector Pills -->
+          <div id="recipe-selector" class="flex flex-wrap items-center gap-1.5">
+            <!-- Recipe selection buttons dynamically rendered here -->
+          </div>
+        </div>
+
+        <div id="ovens-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <!-- Ovens dynamically rendered here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Upgrade & Shop Panel (4 cols on lg) -->
+    <aside class="lg:col-span-4 wood-panel rounded-3xl p-3.5 sm:p-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between border-b-2 border-[#dfb689] pb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🛠️</span>
+          <h2 class="font-cute text-2xl font-bold text-[#5c361c]">업그레이드 &amp; 레시피</h2>
+        </div>
+        <span class="text-xs font-bold text-[#7d4e2d]">골드 투자</span>
+      </div>
+
+      <div id="upgrades-container" class="flex flex-col gap-2.5 max-h-[680px] overflow-y-auto pr-0.5">
+        <!-- Upgrades dynamically rendered here -->
+      </div>
+    </aside>
+  </main>
+
+  <!-- Day Summary Modal -->
+  <div id="day-summary-modal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-4">
+    <div class="wood-panel max-w-md w-full rounded-3xl p-6 text-center relative">
+      <div class="text-5xl mb-2">🎉</div>
+      <h3 id="summary-title" class="font-cute text-3xl font-bold text-[#5c361c]">1일차 영업 종료!</h3>
+      <p class="text-sm text-[#7a4b2a] mt-1 mb-4">오늘 하루도 맛있는 빵을 구워주셔서 고마워요!</p>
+
+      <div class="bg-[#fff8ee] border-2 border-[#e0be94] rounded-2xl p-4 mb-5 space-y-2.5 text-sm">
+        <div class="flex justify-between items-center">
+          <span class="font-bold text-[#7a4b2a]">판매한 빵</span>
+          <span id="summary-sold" class="font-black text-lg text-[#4a2e1b]">0개</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="font-bold text-[#7a4b2a]">오늘 번 골드 (팁 포함)</span>
+          <span id="summary-gold" class="font-black text-lg text-amber-600">+0G</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="font-bold text-[#7a4b2a]">획득 평판</span>
+          <span id="summary-rep" class="font-black text-lg text-rose-600">+0⭐</span>
+        </div>
+        <div id="summary-levelup" class="hidden pt-2 border-t border-dashed border-[#dfc097] text-emerald-700 font-extrabold">
+          🌟 빵집 레벨이 올랐어요! 새 레시피와 손님 혜택을 확인하세요!
+        </div>
+      </div>
+
+      <button id="btn-next-day" class="juicy-btn w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-base shadow-md border-2 border-amber-700">
+        다음 날 영업 시작하기 ☀️
+      </button>
+    </div>
+  </div>
+
+  <!-- Guide Modal -->
+  <div id="guide-modal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-4">
+    <div class="wood-panel max-w-lg w-full rounded-3xl p-5 sm:p-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-cute text-3xl font-bold text-[#5c361c]">📖 빵집 타이쿤 놀이법</h3>
+        <button id="btn-close-guide" class="juicy-btn px-3 py-1 rounded-xl bg-[#fff3e0] border-2 border-[#cfa272] font-bold text-sm">
+          닫기 ✕
+        </button>
+      </div>
+      <div class="space-y-2.5 text-sm text-[#56331b] bg-[#fffaf2] rounded-2xl p-4 border-2 border-[#e3c299]">
+        <p><strong>1. 레시피 선택 &amp; 굽기:</strong> 아래에서 구울 빵을 고른 뒤 <b>오븐</b>을 클릭해 빵을 구우세요. 다 익으면 오븐을 눌러 <b>진열대</b>로 옮깁니다!</p>
+        <p><strong>2. 손님 응대:</strong> 손님이 원하는 빵 말풍선을 확인하세요! 진열대의 해당 빵을 누른 뒤 손님을 클릭하거나, 손님 카드를 바로 클릭해 서빙할 수 있어요. 빠를수록 <b>보너스 팁</b>을 받습니다!</p>
+        <p><strong>3. 시간대 러시:</strong> 하루(60초)는 아침·점심·저녁으로 흘러가며, 저녁 러시 때는 손님이 더 자주 오고 골드 보상이 커집니다.</p>
+        <p><strong>4. 업그레이드:</strong> 모은 골드로 오븐을 늘리고, 굽기 속도·자동 수거·새 레시피·손님 인내심을 업그레이드하세요!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset Confirmation Box (No native confirm/alert) -->
+  <div id="reset-modal" class="hidden fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-4">
+    <div class="wood-panel max-w-sm w-full rounded-3xl p-5 text-center">
+      <div class="text-4xl mb-2">🔄</div>
+      <h3 class="font-cute text-2xl font-bold text-[#5c361c] mb-1">새 게임을 시작할까요?</h3>
+      <p class="text-xs sm:text-sm text-[#7a4b2a] mb-4">현재 진행 중인 골드, 평판, 업그레이드 기록이 초기화됩니다.</p>
+      <div class="flex gap-2.5">
+        <button id="btn-cancel-reset" class="juicy-btn flex-1 py-2.5 rounded-2xl bg-[#fff3e0] border-2 border-[#cfa272] font-bold text-sm">
+          취소
+        </button>
+        <button id="btn-confirm-reset" class="juicy-btn flex-1 py-2.5 rounded-2xl bg-red-500 text-white border-2 border-red-700 font-bold text-sm">
+          초기화하기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * 빵집 타이쿤 (Bakery Tycoon)
+     * Single-file self-contained game with Web Audio API sound effects,
+     * day/night rush phases, baking ovens, display shelf, customer AI & patience,
+     * and upgrade progression.
+     */
+
+    // ==========================================
+    // 1. GAME DATA & CONFIGURATION
+    // ==========================================
+    const RECIPES = [
+      {
+        id: 'salt_bread',
+        name: '소금빵',
+        emoji: '🥖',
+        bakeTime: 3.2, // seconds
+        price: 28,
+        repGain: 1,
+        unlockLevel: 1,
+        color: 'bg-amber-50 border-amber-300'
+      },
+      {
+        id: 'croissant',
+        name: '크루아상',
+        emoji: '🥐',
+        bakeTime: 4.5,
+        price: 42,
+        repGain: 2,
+        unlockLevel: 1,
+        color: 'bg-orange-50 border-orange-300'
+      },
+      {
+        id: 'red_bean',
+        name: '단팥빵',
+        emoji: '🥯',
+        bakeTime: 5.5,
+        price: 58,
+        repGain: 2,
+        unlockLevel: 2,
+        color: 'bg-rose-50 border-rose-300'
+      },
+      {
+        id: 'strawberry_cake',
+        name: '딸기케이크',
+        emoji: '🍰',
+        bakeTime: 7.5,
+        price: 92,
+        repGain: 4,
+        unlockLevel: 3,
+        color: 'bg-pink-50 border-pink-300'
+      }
+    ];
+
+    const CUSTOMER_PERSONAS = [
+      { avatar: '🧸', name: '곰돌이 손님', hello: '맛있는 빵 있어요?', happy: '최고예요! 또 올게요!', angry: '너무 오래 기다렸어요...' },
+      { avatar: '🐱', name: '고양이 손님', hello: '냥~ 이거 주세요!', happy: '골드랑 팁 여기요~ 냥!', angry: '흥, 다른 빵집 갈래요!' },
+      { avatar: '🐰', name: '토끼 손님', hello: '오늘 빵 냄새가 좋아요!', happy: '행복한 맛이에요! 고마워요!', angry: '시간이 없어요, 다음에 올게요!' },
+      { avatar: '🦊', name: '여우 손님', hello: '인기 메뉴가 뭐죠?', happy: '완벽한 타이밍! 감사해요!', angry: '기다리다 지쳤어요...' },
+      { avatar: '🐸', name: '개구리 손님', hello: '개굴~ 빵 주세요!', happy: '개굴개굴~ 정말 맛있어요!', angry: '아쉽네요, 다음 기회에!' }
+    ];
+
+    const UPGRADE_DEFS = [
+      {
+        id: 'extra_oven',
+        title: '오븐 추가 설치',
+        desc: '동시에 구울 수 있는 오븐 슬롯을 1개 늘립니다.',
+        icon: '🔥',
+        baseCost: 110,
+        costMult: 1.85,
+        maxLevel: 6,
+        getStatText: (lvl) => `현재 오븐: ${lvl}개`
+      },
+      {
+        id: 'bake_speed',
+        title: '고화력 오븐 업그레이드',
+        desc: '모든 빵의 굽기 시간이 14%씩 빨라집니다.',
+        icon: '⚡',
+        baseCost: 90,
+        costMult: 1.65,
+        maxLevel: 7,
+        getStatText: (lvl) => `단축 속도: +${lvl * 14}%`
+      },
+      {
+        id: 'auto_collect',
+        title: '자동 진열 레일',
+        desc: '다 구워진 빵을 자동으로 진열대에 올려줍니다.',
+        icon: '🤖',
+        baseCost: 180,
+        costMult: 2.2,
+        maxLevel: 1,
+        getStatText: (lvl) => (lvl > 0 ? '활성화됨 (자동 진열)' : '미적용 (클릭 수거)')
+      },
+      {
+        id: 'tip_boost',
+        title: '고급 포장 & 팁 향상',
+        desc: '판매 골드와 빠른 서빙 팁 보너스가 18% 증가합니다.',
+        icon: '💎',
+        baseCost: 120,
+        costMult: 1.7,
+        maxLevel: 6,
+        getStatText: (lvl) => `수익 보너스: +${lvl * 18}%`
+      },
+      {
+        id: 'patience_boost',
+        title: '따뜻한 카페 분위기',
+        desc: '손님들의 대기 인내심 시간이 20% 늘어납니다.',
+        icon: '☕',
+        baseCost: 100,
+        costMult: 1.6,
+        maxLevel: 5,
+        getStatText: (lvl) => `인내심: +${lvl * 20}%`
+      }
+    ];
+
+    const DAY_DURATION = 60; // seconds per day
+
+    // ==========================================
+    // 2. SOUND EFFECTS ENGINE (WEB AUDIO API)
+    // ==========================================
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+
+      ensureContext() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            this.ctx = new AudioCtx();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      }
+
+      playTone(freq, duration, type = 'sine', volume = 0.14, delay = 0, slideToFreq = null) {
+        if (this.muted) return;
+        this.ensureContext();
+        if (!this.ctx) return;
+
+        try {
+          const now = this.ctx.currentTime + delay;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, now);
+          if (slideToFreq) {
+            osc.frequency.exponentialRampToValueAtTime(slideToFreq, now + duration);
+          }
+
+          gain.gain.setValueAtTime(0.0001, now);
+          gain.gain.linearRampToValueAtTime(volume, now + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + duration + 0.02);
+        } catch (err) {
+          // Ignore audio errors on restricted devices
+        }
+      }
+
+      popBakeStart() {
+        this.playTone(320, 0.09, 'triangle', 0.12, 0, 520);
+      }
+
+      dingReady() {
+        this.playTone(784, 0.12, 'sine', 0.13, 0);
+        this.playTone(1046.5, 0.22, 'sine', 0.14, 0.09);
+      }
+
+      coinClink() {
+        this.playTone(987.77, 0.09, 'sine', 0.14, 0);
+        this.playTone(1318.5, 0.24, 'sine', 0.15, 0.07);
+      }
+
+      selectBread() {
+        this.playTone(540, 0.06, 'sine', 0.08, 0);
+      }
+
+      customerLeaveAngry() {
+        this.playTone(260, 0.16, 'sawtooth', 0.08, 0, 165);
+      }
+
+      upgradeBuy() {
+        this.playTone(523.25, 0.1, 'triangle', 0.14, 0);
+        this.playTone(659.25, 0.1, 'triangle', 0.14, 0.08);
+        this.playTone(783.99, 0.22, 'triangle', 0.15, 0.16);
+      }
+
+      dayClearFanfare() {
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((n, idx) => {
+          this.playTone(n, 0.22, 'triangle', 0.15, idx * 0.12);
+        });
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    // ==========================================
+    // 3. GAME STATE & INITIALIZATION
+    // ==========================================
+    function createInitialState() {
+      return {
+        day: 1,
+        dayElapsed: 0,
+        isDayPaused: false,
+        gold: 120,
+        reputation: 0,
+        level: 1,
+        selectedRecipeId: 'salt_bread',
+        selectedShelfRecipeId: null,
+        shelf: {
+          salt_bread: 2,
+          croissant: 1,
+          red_bean: 0,
+          strawberry_cake: 0
+        },
+        ovens: [
+          { id: 0, status: 'idle', recipeId: null, progress: 0, duration: 0 },
+          { id: 1, status: 'idle', recipeId: null, progress: 0, duration: 0 }
+        ],
+        customers: [],
+        nextCustomerId: 1,
+        customerSpawnTimer: 1.4,
+        upgrades: {
+          extra_oven: 0,
+          bake_speed: 0,
+          auto_collect: 0,
+          tip_boost: 0,
+          patience_boost: 0
+        },
+        dayStats: {
+          soldCount: 0,
+          goldEarned: 0,
+          repEarned: 0,
+          leveledUpToday: false
+        }
+      };
+    }
+
+    let state = createInitialState();
+
+    // ==========================================
+    // 4. HELPER CALCULATIONS & FLOATING POPUPS
+    // ==========================================
+    function computeLevelFromReputation(rep) {
+      // Lv.1 at 0 rep, Lv.2 at 12 rep, Lv.3 at 28 rep, Lv.4 at 50 rep, etc.
+      let lvl = 1;
+      let threshold = 12;
+      let totalNeeded = 0;
+      while (rep >= totalNeeded + threshold) {
+        totalNeeded += threshold;
+        lvl += 1;
+        threshold = Math.round(threshold * 1.45 + 6);
+      }
+      return lvl;
+    }
+
+    function getUnlockedRecipes() {
+      return RECIPES.filter((r) => state.level >= r.unlockLevel);
+    }
+
+    function getBakeDuration(baseBakeTime) {
+      const speedFactor = Math.pow(0.86, state.upgrades.bake_speed);
+      return Math.max(1.0, baseBakeTime * speedFactor);
+    }
+
+    function getPriceMultiplier() {
+      return 1 + state.upgrades.tip_boost * 0.18;
+    }
+
+    function getPatienceMultiplier() {
+      return 1 + state.upgrades.patience_boost * 0.2;
+    }
+
+    function getUpgradeCost(def) {
+      const currentLvl = state.upgrades[def.id] || 0;
+      return Math.round(def.baseCost * Math.pow(def.costMult, currentLvl));
+    }
+
+    function getTimePhaseInfo() {
+      const ratio = Math.min(1, state.dayElapsed / DAY_DURATION);
+      if (ratio < 0.35) {
+        return {
+          label: '🌅 아침 오픈',
+          badgeClass: 'bg-amber-200 text-amber-900',
+          spawnInterval: 4.8,
+          maxCustomers: 3,
+          rushMult: 1.0
+        };
+      } else if (ratio < 0.72) {
+        return {
+          label: '☀️ 점심 시간',
+          badgeClass: 'bg-sky-200 text-sky-900',
+          spawnInterval: 3.6,
+          maxCustomers: 4,
+          rushMult: 1.15
+        };
+      } else {
+        return {
+          label: '🌇 저녁 피크 타임!',
+          badgeClass: 'bg-rose-200 text-rose-900 font-extrabold',
+          spawnInterval: 2.5,
+          maxCustomers: 4,
+          rushMult: 1.35
+        };
+      }
+    }
+
+    function spawnFloatingPopup(text, x, y, colorClass = 'text-amber-600 text-base sm:text-lg') {
+      const el = document.createElement('div');
+      el.className = `floating-popup ${colorClass}`;
+      el.textContent = text;
+      el.style.left = `${Math.max(40, Math.min(window.innerWidth - 40, x))}px`;
+      el.style.top = `${Math.max(40, y)}px`;
+      document.body.appendChild(el);
+      setTimeout(() => {
+        el.remove();
+      }, 1080);
+    }
+
+    function showEventBanner(text, type = 'info') {
+      const banner = document.getElementById('event-banner');
+      const inner = document.getElementById('event-banner-inner');
+      banner.classList.remove('hidden');
+
+      if (type === 'levelup') {
+        inner.className = 'rounded-2xl px-4 py-2 text-center text-xs sm:text-sm font-extrabold shadow-sm border-2 bg-emerald-100 border-emerald-400 text-emerald-900';
+      } else if (type === 'rush') {
+        inner.className = 'rounded-2xl px-4 py-2 text-center text-xs sm:text-sm font-extrabold shadow-sm border-2 bg-rose-100 border-rose-400 text-rose-900';
+      } else {
+        inner.className = 'rounded-2xl px-4 py-2 text-center text-xs sm:text-sm font-extrabold shadow-sm border-2 bg-amber-100 border-amber-300 text-amber-900';
+      }
+      inner.textContent = text;
+
+      clearTimeout(showEventBanner._timer);
+      showEventBanner._timer = setTimeout(() => {
+        banner.classList.add('hidden');
+      }, 3400);
+    }
+
+    // ==========================================
+    // 5. CORE GAME ACTIONS
+    // ==========================================
+    function startBaking(ovenIndex, event) {
+      if (state.isDayPaused) return;
+      const oven = state.ovens[ovenIndex];
+      if (!oven || oven.status !== 'idle') return;
+
+      const unlocked = getUnlockedRecipes();
+      let recipe = unlocked.find((r) => r.id === state.selectedRecipeId);
+      if (!recipe) {
+        recipe = unlocked[0];
+        state.selectedRecipeId = recipe.id;
+      }
+
+      oven.status = 'baking';
+      oven.recipeId = recipe.id;
+      oven.progress = 0;
+      oven.duration = getBakeDuration(recipe.bakeTime);
+
+      sound.popBakeStart();
+      if (event) {
+        spawnFloatingPopup(`${recipe.emoji} 굽기 시작!`, event.clientX, event.clientY - 12, 'text-orange-700 text-sm sm:text-base');
+      }
+      renderOvens();
+    }
+
+    function collectFromOven(ovenIndex, event) {
+      if (state.isDayPaused) return;
+      const oven = state.ovens[ovenIndex];
+      if (!oven || oven.status !== 'ready') return;
+
+      const recipe = RECIPES.find((r) => r.id === oven.recipeId);
+      if (!recipe) return;
+
+      state.shelf[recipe.id] = (state.shelf[recipe.id] || 0) + 1;
+      oven.status = 'idle';
+      oven.recipeId = null;
+      oven.progress = 0;
+      oven.duration = 0;
+
+      sound.selectBread();
+      if (event) {
+        spawnFloatingPopup(`+1 ${recipe.emoji} ${recipe.name}`, event.clientX, event.clientY - 10, 'text-emerald-700 text-sm sm:text-base');
+      }
+      renderShelf();
+      renderOvens();
+    }
+
+    function handleOvenClick(ovenIndex, event) {
+      const oven = state.ovens[ovenIndex];
+      if (!oven) return;
+      if (oven.status === 'ready') {
+        collectFromOven(ovenIndex, event);
+      } else if (oven.status === 'idle') {
+        startBaking(ovenIndex, event);
+      }
+    }
+
+    function handleShelfClick(recipeId, event) {
+      if (state.isDayPaused) return;
+      const stock = state.shelf[recipeId] || 0;
+      if (stock <= 0) {
+        if (event) {
+          spawnFloatingPopup('재고가 없어요! 오븐에서 구워주세요', event.clientX, event.clientY - 10, 'text-rose-600 text-xs sm:text-sm');
+        }
+        return;
+      }
+
+      // If there is exactly one customer waiting for this bread, serve them right away!
+      const matchingCustomers = state.customers.filter((c) => c.wantId === recipeId);
+      if (matchingCustomers.length === 1) {
+        serveCustomer(matchingCustomers[0].id, recipeId, event);
+        return;
+      }
+
+      // Otherwise toggle selection so player can click a customer
+      if (state.selectedShelfRecipeId === recipeId) {
+        state.selectedShelfRecipeId = null;
+      } else {
+        state.selectedShelfRecipeId = recipeId;
+        sound.selectBread();
+      }
+      renderShelf();
+    }
+
+    function spawnCustomer() {
+      const phase = getTimePhaseInfo();
+      if (state.customers.length >= phase.maxCustomers) return;
+
+      const unlocked = getUnlockedRecipes();
+      const chosenRecipe = unlocked[Math.floor(Math.random() * unlocked.length)];
+      const persona = CUSTOMER_PERSONAS[Math.floor(Math.random() * CUSTOMER_PERSONAS.length)];
+
+      // Base patience scales gently with higher tier breads
+      const basePatience = (15 + chosenRecipe.bakeTime * 1.3) * getPatienceMultiplier();
+
+      const customer = {
+        id: state.nextCustomerId++,
+        avatar: persona.avatar,
+        name: persona.name,
+        helloText: persona.hello,
+        happyText: persona.happy,
+        angryText: persona.angry,
+        wantId: chosenRecipe.id,
+        patience: basePatience,
+        maxPatience: basePatience,
+        bubbleOverride: null,
+        bubbleTimer: 0
+      };
+
+      state.customers.push(customer);
+      renderCustomers();
+    }
+
+    function serveCustomer(customerId, explicitRecipeId = null, event = null) {
+      if (state.isDayPaused) return;
+      const idx = state.customers.findIndex((c) => c.id === customerId);
+      if (idx === -1) return;
+
+      const customer = state.customers[idx];
+      const breadToGive = explicitRecipeId || state.selectedShelfRecipeId || customer.wantId;
+
+      if (breadToGive !== customer.wantId) {
+        if (event) {
+          const wanted = RECIPES.find((r) => r.id === customer.wantId);
+          spawnFloatingPopup(`${wanted ? wanted.emoji + ' ' + wanted.name : '다른 빵'}을 원해요!`, event.clientX, event.clientY - 12, 'text-rose-600 text-xs sm:text-sm');
+        }
+        return;
+      }
+
+      const stock = state.shelf[breadToGive] || 0;
+      if (stock <= 0) {
+        if (event) {
+          spawnFloatingPopup('진열대에 빵이 부족해요!', event.clientX, event.clientY - 12, 'text-amber-700 text-xs sm:text-sm');
+        }
+        return;
+      }
+
+      // Deduct bread & calculate rewards
+      const recipe = RECIPES.find((r) => r.id === breadToGive);
+      state.shelf[breadToGive] -= 1;
+      if (state.selectedShelfRecipeId === breadToGive && state.shelf[breadToGive] <= 0) {
+        state.selectedShelfRecipeId = null;
+      }
+
+      const patienceRatio = customer.patience / customer.maxPatience;
+      const tipBonus = patienceRatio > 0.55 ? Math.round(recipe.price * 0.25 * patienceRatio) : 0;
+      const phaseMult = getTimePhaseInfo().rushMult;
+      const totalGold = Math.max(5, Math.round((recipe.price + tipBonus) * getPriceMultiplier() * (0.85 + phaseMult * 0.15)));
+      const repGain = recipe.repGain + (tipBonus > 0 ? 1 : 0);
+
+      state.gold += totalGold;
+      state.reputation += repGain;
+
+      state.dayStats.soldCount += 1;
+      state.dayStats.goldEarned += totalGold;
+      state.dayStats.repEarned += repGain;
+
+      // Remove customer
+      state.customers.splice(idx, 1);
+
+      sound.coinClink();
+      if (event) {
+        const tipLabel = tipBonus > 0 ? ` (팁 +${tipBonus}G!)` : '';
+        spawnFloatingPopup(`+${totalGold}G${tipLabel}`, event.clientX, event.clientY - 16, 'text-amber-600 text-base sm:text-xl');
+      }
+
+      checkLevelUp();
+      renderAll();
+    }
+
+    function checkLevelUp() {
+      const newLevel = computeLevelFromReputation(state.reputation);
+      if (newLevel > state.level) {
+        state.level = newLevel;
+        state.dayStats.leveledUpToday = true;
+        sound.upgradeBuy();
+        const newlyUnlocked = RECIPES.filter((r) => r.unlockLevel === newLevel);
+        const unlockMsg = newlyUnlocked.length > 0
+          ? ` 새 레시피 [${newlyUnlocked.map((r) => r.emoji + r.name).join(', ')}] 해금!`
+          : ' 손님들이 더 많이 찾아옵니다!';
+        showEventBanner(`🌟 빵집 레벨 ${newLevel} 달성!${unlockMsg}`, 'levelup');
+      }
+    }
+
+    function buyUpgrade(upgradeId, event) {
+      if (state.isDayPaused) return;
+      const def = UPGRADE_DEFS.find((u) => u.id === upgradeId);
+      if (!def) return;
+
+      const currentLvl = state.upgrades[upgradeId] || 0;
+      if (currentLvl >= def.maxLevel) return;
+
+      const cost = getUpgradeCost(def);
+      if (state.gold < cost) {
+        if (event) {
+          spawnFloatingPopup('골드가 부족해요!', event.clientX, event.clientY - 10, 'text-rose-600 text-xs sm:text-sm');
+        }
+        return;
+      }
+
+      state.gold -= cost;
+      state.upgrades[upgradeId] = currentLvl + 1;
+
+      if (upgradeId === 'extra_oven') {
+        const newId = state.ovens.length;
+        state.ovens.push({ id: newId, status: 'idle', recipeId: null, progress: 0, duration: 0 });
+      } else if (upgradeId === 'auto_collect') {
+        // Immediately collect any ready ovens
+        state.ovens.forEach((ov) => {
+          if (ov.status === 'ready' && ov.recipeId) {
+            state.shelf[ov.recipeId] = (state.shelf[ov.recipeId] || 0) + 1;
+            ov.status = 'idle';
+            ov.recipeId = null;
+            ov.progress = 0;
+            ov.duration = 0;
+          }
+        });
+      }
+
+      sound.upgradeBuy();
+      if (event) {
+        spawnFloatingPopup(`${def.icon} 업그레이드 완료!`, event.clientX, event.clientY - 12, 'text-emerald-700 text-sm sm:text-base');
+      }
+      renderAll();
+    }
+
+    function finishDay() {
+      state.isDayPaused = true;
+      sound.dayClearFanfare();
+
+      document.getElementById('summary-title').textContent = `${state.day}일차 영업 종료!`;
+      document.getElementById('summary-sold').textContent = `${state.dayStats.soldCount}개`;
+      document.getElementById('summary-gold').textContent = `+${state.dayStats.goldEarned}G`;
+      document.getElementById('summary-rep').textContent = `+${state.dayStats.repEarned}⭐`;
+
+      const lvlNotice = document.getElementById('summary-levelup');
+      if (state.dayStats.leveledUpToday) {
+        lvlNotice.classList.remove('hidden');
+      } else {
+        lvlNotice.classList.add('hidden');
+      }
+
+      document.getElementById('day-summary-modal').classList.remove('hidden');
+    }
+
+    function startNextDay() {
+      document.getElementById('day-summary-modal').classList.add('hidden');
+      state.day += 1;
+      state.dayElapsed = 0;
+      state.isDayPaused = false;
+      state.customerSpawnTimer = 0.8;
+      state.dayStats = {
+        soldCount: 0,
+        goldEarned: 0,
+        repEarned: 0,
+        leveledUpToday: false
+      };
+      showEventBanner(`☀️ ${state.day}일차 빵집 문을 열었습니다!`, 'info');
+      renderAll();
+    }
+
+    // ==========================================
+    // 6. MAIN SIMULATION LOOP
+    // ==========================================
+    let lastTimestamp = performance.now();
+    let prevPhaseLabel = '';
+
+    function updateGame(dt) {
+      if (state.isDayPaused) return;
+
+      // Advance Day Timer
+      state.dayElapsed += dt;
+      const phase = getTimePhaseInfo();
+      if (phase.label !== prevPhaseLabel) {
+        prevPhaseLabel = phase.label;
+        if (phase.label.includes('저녁')) {
+          showEventBanner('🌇 저녁 피크 타임! 손님들이 몰려오고 수익 보너스가 적용됩니다!', 'rush');
+        }
+      }
+
+      if (state.dayElapsed >= DAY_DURATION) {
+        state.dayElapsed = DAY_DURATION;
+        updateHUD();
+        finishDay();
+        return;
+      }
+
+      // Update Ovens
+      let ovensChanged = false;
+      state.ovens.forEach((oven) => {
+        if (oven.status === 'baking') {
+          oven.progress += dt;
+          if (oven.progress >= oven.duration) {
+            oven.progress = oven.duration;
+            if (state.upgrades.auto_collect > 0 && oven.recipeId) {
+              state.shelf[oven.recipeId] = (state.shelf[oven.recipeId] || 0) + 1;
+              oven.status = 'idle';
+              oven.recipeId = null;
+              oven.progress = 0;
+              oven.duration = 0;
+              sound.dingReady();
+              ovensChanged = true;
+            } else {
+              oven.status = 'ready';
+              sound.dingReady();
+              ovensChanged = true;
+            }
+          }
+        }
+      });
+
+      // Spawn Customers
+      state.customerSpawnTimer -= dt;
+      if (state.customerSpawnTimer <= 0) {
+        spawnCustomer();
+        state.customerSpawnTimer = phase.spawnInterval * (0.82 + Math.random() * 0.36);
+      }
+
+      // Update Customer Patience
+      let customersChanged = false;
+      for (let i = state.customers.length - 1; i >= 0; i--) {
+        const c = state.customers[i];
+        c.patience -= dt;
+        if (c.patience <= 0) {
+          state.customers.splice(i, 1);
+          sound.customerLeaveAngry();
+          customersChanged = true;
+        }
+      }
+
+      updateHUD();
+      updateOvenProgressBarsOnly(ovensChanged);
+      updateCustomerPatienceBarsOnly(customersChanged);
+      if (ovensChanged) renderShelf();
+    }
+
+    function updateOvenProgressBarsOnly(forceFullRender) {
+      if (forceFullRender) {
+        renderOvens();
+        return;
+      }
+      state.ovens.forEach((oven) => {
+        if (oven.status === 'baking') {
+          const pct = Math.min(100, (oven.progress / oven.duration) * 100);
+          const bar = document.getElementById(`oven-bar-${oven.id}`);
+          const txt = document.getElementById(`oven-pct-${oven.id}`);
+          if (bar) bar.style.width = `${pct.toFixed(1)}%`;
+          if (txt) txt.textContent = `${Math.max(0.1, (oven.duration - oven.progress)).toFixed(1)}초`;
+        }
+      });
+    }
+
+    function updateCustomerPatienceBarsOnly(forceFullRender) {
+      if (forceFullRender) {
+        renderCustomers();
+        return;
+      }
+      state.customers.forEach((c) => {
+        const ratio = Math.max(0, c.patience / c.maxPatience);
+        const pct = (ratio * 100).toFixed(1);
+        const bar = document.getElementById(`cust-bar-${c.id}`);
+        const card = document.getElementById(`cust-card-${c.id}`);
+        if (bar) {
+          bar.style.width = `${pct}%`;
+          if (ratio < 0.3) {
+            bar.className = 'h-full bg-rose-500 transition-all duration-150 rounded-full';
+          } else if (ratio < 0.6) {
+            bar.className = 'h-full bg-amber-400 transition-all duration-150 rounded-full';
+          } else {
+            bar.className = 'h-full bg-emerald-400 transition-all duration-150 rounded-full';
+          }
+        }
+        if (card) {
+          if (ratio < 0.28) {
+            card.classList.add('urgent-patience');
+          } else {
+            card.classList.remove('urgent-patience');
+          }
+        }
+      });
+    }
+
+    function gameLoop(now) {
+      const dt = Math.min(0.1, (now - lastTimestamp) / 1000);
+      lastTimestamp = now;
+      updateGame(dt);
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ==========================================
+    // 7. UI RENDERING FUNCTIONS
+    // ==========================================
+    function updateHUD() {
+      document.getElementById('hud-level').textContent = `Lv.${state.level}`;
+      document.getElementById('hud-day').textContent = `${state.day}일차`;
+
+      const phase = getTimePhaseInfo();
+      const phaseEl = document.getElementById('hud-phase');
+      phaseEl.textContent = phase.label;
+      phaseEl.className = `px-2 py-0.5 rounded-full text-[11px] ${phase.badgeClass}`;
+
+      const remaining = Math.max(0, Math.ceil(DAY_DURATION - state.dayElapsed));
+      document.getElementById('hud-timer').textContent = `${remaining}s`;
+
+      const progressPct = Math.min(100, (state.dayElapsed / DAY_DURATION) * 100);
+      document.getElementById('hud-time-bar').style.width = `${progressPct}%`;
+
+      document.getElementById('hud-gold').textContent = state.gold.toLocaleString();
+      document.getElementById('hud-rep').textContent = state.reputation.toLocaleString();
+    }
+
+    function renderCustomers() {
+      const container = document.getElementById('customers-container');
+      const badge = document.getElementById('customer-count-badge');
+      const phase = getTimePhaseInfo();
+      badge.textContent = `${state.customers.length} / ${phase.maxCustomers}명`;
+
+      if (state.customers.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full flex flex-col items-center justify-center py-6 px-4 rounded-2xl bg-[#fffaf2]/80 border-2 border-dashed border-[#dec099] text-[#8a5a38]">
+            <span class="text-3xl mb-1">🔔</span>
+            <p class="text-sm font-bold">손님이 다가오고 있어요! 미리 빵을 구워두세요.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = state.customers.map((c) => {
+        const recipe = RECIPES.find((r) => r.id === c.wantId) || RECIPES[0];
+        const ratio = Math.max(0, c.patience / c.maxPatience);
+        const barColor = ratio < 0.3 ? 'bg-rose-500' : ratio < 0.6 ? 'bg-amber-400' : 'bg-emerald-400';
+        const hasStock = (state.shelf[c.wantId] || 0) > 0;
+        const isTargeted = state.selectedShelfRecipeId === c.wantId && hasStock;
+        const urgentClass = ratio < 0.28 ? 'urgent-patience' : '';
+
+        return `
+          <div id="cust-card-${c.id}" onclick="serveCustomer(${c.id}, null, event)"
+               class="customer-card ${urgentClass} juicy-btn cursor-pointer rounded-2xl p-3 bg-[#fffdf9] border-2 ${
+                 isTargeted
+                   ? 'border-emerald-500 ring-4 ring-emerald-200'
+                   : hasStock
+                   ? 'border-amber-400 hover:border-amber-600'
+                   : 'border-[#e0c39e]'
+               } flex flex-col justify-between shadow-sm relative">
+
+            <!-- Speech bubble with wanted bread -->
+            <div class="flex items-center justify-between gap-1.5 bg-[#fff4e2] border border-[#e3bf92] rounded-xl px-2 py-1 mb-2">
+              <span class="text-xl leading-none">${recipe.emoji}</span>
+              <span class="text-xs font-extrabold text-[#5c361c] truncate">${recipe.name}</span>
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                hasStock ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-700'
+              }">
+                ${hasStock ? '보유' : '없음'}
+              </span>
+            </div>
+
+            <!-- Avatar & Name -->
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-10 h-10 rounded-full bg-amber-100 border-2 border-amber-300 flex items-center justify-center text-2xl shrink-0">
+                ${c.avatar}
+              </div>
+              <div class="min-w-0">
+                <div class="text-xs font-extrabold text-[#4a2e1b] truncate">${c.name}</div>
+                <div class="text-[11px] text-[#875836] truncate">${c.helloText}</div>
+              </div>
+            </div>
+
+            <!-- Patience gauge -->
+            <div>
+              <div class="flex justify-between text-[10px] font-bold text-[#7d4e2d] mb-0.5">
+                <span>인내심</span>
+                <span>${Math.ceil(c.patience)}s</span>
+              </div>
+              <div class="w-full h-2.5 bg-[#ead7bc] rounded-full overflow-hidden border border-[#cca576]">
+                <div id="cust-bar-${c.id}" class="h-full ${barColor} transition-all duration-150 rounded-full" style="width: ${(ratio * 100).toFixed(1)}%"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderShelf() {
+      const container = document.getElementById('shelf-container');
+      const hint = document.getElementById('shelf-hint');
+
+      if (state.selectedShelfRecipeId) {
+        const sel = RECIPES.find((r) => r.id === state.selectedShelfRecipeId);
+        hint.textContent = `선택됨: ${sel ? sel.emoji + ' ' + sel.name : ''} → 손님을 클릭하세요!`;
+        hint.className = 'text-xs font-extrabold text-emerald-900 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-400';
+      } else {
+        hint.textContent = '빵을 클릭하면 손님에게 서빙됩니다';
+        hint.className = 'text-xs font-bold text-amber-800 bg-amber-100/90 px-2.5 py-1 rounded-full border border-amber-300';
+      }
+
+      container.innerHTML = RECIPES.map((r) => {
+        const unlocked = state.level >= r.unlockLevel;
+        const count = state.shelf[r.id] || 0;
+        const isSelected = state.selectedShelfRecipeId === r.id && count > 0;
+        const estPrice = Math.round(r.price * getPriceMultiplier());
+        const wantedBySomeone = state.customers.some((c) => c.wantId === r.id && count > 0);
+
+        if (!unlocked) {
+          return `
+            <div class="rounded-2xl p-3 bg-[#efe0ca]/70 border-2 border-dashed border-[#cfa878] flex flex-col items-center justify-center text-center opacity-75">
+              <span class="text-2xl mb-1">🔒</span>
+              <span class="text-xs font-extrabold text-[#7d4e2d]">Lv.${r.unlockLevel} 해금</span>
+              <span class="text-[11px] text-[#966846]">${r.name}</span>
+            </div>
+          `;
+        }
+
+        return `
+          <button onclick="handleShelfClick('${r.id}', event)"
+                  class="juicy-btn text-left rounded-2xl p-2.5 sm:p-3 ${r.color} border-2 ${
+                    isSelected
+                      ? 'border-emerald-600 ring-4 ring-emerald-200'
+                      : wantedBySomeone
+                      ? 'border-amber-500 shadow-md'
+                      : 'border-[#dfb88b]'
+                  } flex flex-col justify-between relative">
+            <div class="flex items-start justify-between w-full">
+              <span class="text-2xl sm:text-3xl leading-none">${r.emoji}</span>
+              <span class="px-2 py-0.5 rounded-full text-xs font-black ${
+                count > 0 ? 'bg-amber-900 text-amber-50' : 'bg-white/70 text-[#8b5a36] border border-[#d6b289]'
+              }">
+                ${count}개
+              </span>
+            </div>
+            <div class="mt-2">
+              <div class="text-xs sm:text-sm font-extrabold text-[#4a2e1b] truncate">${r.name}</div>
+              <div class="text-[11px] font-bold text-amber-800">판매가 ~${estPrice}G</div>
+            </div>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderRecipeSelector() {
+      const container = document.getElementById('recipe-selector');
+      container.innerHTML = RECIPES.map((r) => {
+        const unlocked = state.level >= r.unlockLevel;
+        const active = state.selectedRecipeId === r.id && unlocked;
+        const bakeSec = getBakeDuration(r.bakeTime).toFixed(1);
+
+        if (!unlocked) {
+          return `
+            <span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-[#ead8be] text-[#8c5d3c] border border-[#cfa878] opacity-75">
+              🔒 Lv.${r.unlockLevel} ${r.name}
+            </span>
+          `;
+        }
+
+        return `
+          <button onclick="selectRecipe('${r.id}')"
+                  class="juicy-btn px-2.5 py-1 rounded-xl text-xs font-extrabold border-2 flex items-center gap-1 ${
+                    active
+                      ? 'bg-amber-500 text-white border-amber-700 shadow-sm'
+                      : 'bg-[#fffaf2] text-[#5c361c] border-[#d6ad7e] hover:bg-amber-100'
+                  }">
+            <span>${r.emoji}</span>
+            <span>${r.name}</span>
+            <span class="opacity-80 text-[10px]">(${bakeSec}s)</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectRecipe(recipeId) {
+      const recipe = RECIPES.find((r) => r.id === recipeId);
+      if (!recipe || state.level < recipe.unlockLevel) return;
+      state.selectedRecipeId = recipeId;
+      sound.selectBread();
+      renderRecipeSelector();
+      renderOvens();
+    }
+
+    function renderOvens() {
+      const container = document.getElementById('ovens-container');
+      const selectedRecipe = RECIPES.find((r) => r.id === state.selectedRecipeId) || RECIPES[0];
+
+      container.innerHTML = state.ovens.map((oven, idx) => {
+        if (oven.status === 'ready') {
+          const recipe = RECIPES.find((r) => r.id === oven.recipeId) || selectedRecipe;
+          return `
+            <button onclick="handleOvenClick(${idx}, event)"
+                    class="juicy-btn ready-pulse rounded-2xl p-3.5 bg-gradient-to-br from-emerald-100 to-lime-100 border-2 border-emerald-500 shadow-md flex flex-col items-center justify-center text-center min-h-[118px]">
+              <div class="text-3xl mb-1">${recipe.emoji}</div>
+              <div class="text-xs sm:text-sm font-black text-emerald-900">${recipe.name} 완성!</div>
+              <div class="mt-1 px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[11px] font-extrabold">
+                눌러서 진열하기 ✨
+              </div>
+            </button>
+          `;
+        }
+
+        if (oven.status === 'baking') {
+          const recipe = RECIPES.find((r) => r.id === oven.recipeId) || selectedRecipe;
+          const pct = Math.min(100, (oven.progress / oven.duration) * 100);
+          const rem = Math.max(0.1, oven.duration - oven.progress).toFixed(1);
+          return `
+            <div onclick="handleOvenClick(${idx}, event)"
+                 class="rounded-2xl p-3.5 bg-[#fff8ee] border-2 border-orange-300 flex flex-col justify-between min-h-[118px]">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-2xl animate-bounce">${recipe.emoji}</span>
+                  <div>
+                    <div class="text-xs font-extrabold text-[#5c361c]">${recipe.name}</div>
+                    <div class="text-[10px] font-bold text-orange-600">굽는 중...</div>
+                  </div>
+                </div>
+                <span id="oven-pct-${oven.id}" class="text-xs font-black text-orange-700 tabular-nums">${rem}초</span>
+              </div>
+
+              <div class="w-full h-3 bg-[#ebd6b7] rounded-full overflow-hidden border border-[#cfa574] mt-3">
+                <div id="oven-bar-${oven.id}" class="h-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-100 rounded-full" style="width: ${pct.toFixed(1)}%"></div>
+              </div>
+            </div>
+          `;
+        }
+
+        // Idle oven
+        return `
+          <button onclick="handleOvenClick(${idx}, event)"
+                  class="juicy-btn rounded-2xl p-3.5 bg-[#fffaf2] hover:bg-amber-50 border-2 border-dashed border-[#cfa272] flex flex-col items-center justify-center text-center min-h-[118px]">
+            <div class="text-2xl mb-1">oven 🔥</div>
+            <div class="text-xs sm:text-sm font-extrabold text-[#5c361c]">오븐 #${idx + 1} (대기 중)</div>
+            <div class="mt-1 text-[11px] font-bold text-amber-700">
+              ${selectedRecipe.emoji} ${selectedRecipe.name} 굽기
+            </div>
+          </button>
+        `.replace('oven 🔥', '🔥');
+      }).join('');
+    }
+
+    function renderUpgrades() {
+      const container = document.getElementById('upgrades-container');
+      container.innerHTML = UPGRADE_DEFS.map((def) => {
+        const currentLvl = state.upgrades[def.id] || 0;
+        const isMax = currentLvl >= def.maxLevel;
+        const cost = getUpgradeCost(def);
+        const canAfford = !isMax && state.gold >= cost;
+
+        return `
+          <div class="rounded-2xl p-3 bg-[#fffaf2] border-2 border-[#e2c298] flex flex-col gap-2">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="w-9 h-9 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-xl shrink-0">
+                  ${def.icon}
+                </span>
+                <div>
+                  <div class="text-xs sm:text-sm font-extrabold text-[#4a2e1b]">
+                    ${def.title} <span class="text-[11px] text-amber-700 font-bold">(${currentLvl}/${def.maxLevel})</span>
+                  </div>
+                  <div class="text-[11px] text-[#7c4e2d] leading-snug">${def.desc}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1 border-t border-[#f0dcc0]">
+              <span class="text-[11px] font-bold text-[#6e4325]">${def.getStatText(currentLvl)}</span>
+              <button onclick="buyUpgrade('${def.id}', event)"
+                      ${isMax || !canAfford ? 'disabled' : ''}
+                      class="juicy-btn px-3 py-1.5 rounded-xl text-xs font-black border-2 ${
+                        isMax
+                          ? 'bg-stone-200 text-stone-500 border-stone-300 cursor-default'
+                          : canAfford
+                          ? 'bg-amber-400 hover:bg-amber-500 text-amber-950 border-amber-600 shadow-sm'
+                          : 'bg-[#f2e4d0] text-[#a37b5b] border-[#d6b68d] opacity-75 cursor-not-allowed'
+                      }">
+                ${isMax ? '최대 레벨' : `🪙 ${cost}G`}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAll() {
+      updateHUD();
+      renderCustomers();
+      renderShelf();
+      renderRecipeSelector();
+      renderOvens();
+      renderUpgrades();
+    }
+
+    // ==========================================
+    // 8. MODAL & UTILITY EVENT LISTENERS
+    // ==========================================
+    function initEventListeners() {
+      // Sound toggle
+      const btnSound = document.getElementById('btn-sound');
+      btnSound.addEventListener('click', () => {
+        sound.muted = !sound.muted;
+        btnSound.textContent = sound.muted ? '🔇' : '🔊';
+        if (!sound.muted) {
+          sound.selectBread();
+        }
+      });
+
+      // Guide modal
+      const guideModal = document.getElementById('guide-modal');
+      document.getElementById('btn-guide').addEventListener('click', () => {
+        guideModal.classList.remove('hidden');
+      });
+      document.getElementById('btn-close-guide').addEventListener('click', () => {
+        guideModal.classList.add('hidden');
+      });
+      guideModal.addEventListener('click', (e) => {
+        if (e.target === guideModal) guideModal.classList.add('hidden');
+      });
+
+      // Reset modal
+      const resetModal = document.getElementById('reset-modal');
+      document.getElementById('btn-reset').addEventListener('click', () => {
+        resetModal.classList.remove('hidden');
+      });
+      document.getElementById('btn-cancel-reset').addEventListener('click', () => {
+        resetModal.classList.add('hidden');
+      });
+      document.getElementById('btn-confirm-reset').addEventListener('click', () => {
+        document.getElementById('day-summary-modal').classList.add('hidden');
+        resetModal.classList.add('hidden');
+        state = createInitialState();
+        prevPhaseLabel = '';
+        showEventBanner('🥐 새 빵집을 오픈했습니다! 맛있는 빵을 구워보세요.', 'info');
+        renderAll();
+      });
+
+      // Next day button
+      document.getElementById('btn-next-day').addEventListener('click', () => {
+        startNextDay();
+      });
+    }
+
+    // Boot game
+    window.addEventListener('DOMContentLoaded', () => {
+      initEventListeners();
+      renderAll();
+      showEventBanner('☀️ 1일차 영업 시작! 오븐을 눌러 빵을 굽고 손님에게 서빙하세요.', 'info');
+      lastTimestamp = performance.now();
+      requestAnimationFrame(gameLoop);
+    });
+  </script>
+</body>
+</html>
